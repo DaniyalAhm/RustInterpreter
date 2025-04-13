@@ -1,0 +1,45 @@
+struct Expr;     // TODO
+struct Value;    // TODO
+struct Lifetime; // TODO
+struct Context;  // TODO
+
+
+
+
+//NOTE: First lets define a Enum for Structs
+//NOTE: These are all the Enums we will need for semantics based of FR Spec
+
+
+enum Terms{
+    Block(Slot), //TODO: Define Slot
+    Var(String),
+    LetMut(String, Box<Terms>),
+    mutBorrow(LVals),
+    r#move(LVals),
+    copy(LVals),
+    enumVals,
+}
+
+enum LVals{
+Varaible(String),
+Deference(Box<LVals>)
+}
+
+
+enum enumRef{
+NotOwned,
+Owned
+}
+
+enum enumVals{
+    Unit,
+    Integer(i32),
+    Reference(enumRef, Box<enumVals>)
+
+}
+
+
+impl Context {
+  fn eval_expr(&mut self, e : &Expr, l: Lifetime) -> Value { todo!() }
+}
+

@@ -1,18 +1,8 @@
- use crate::Lifetime;
-use crate::Lval;
-use crate::Value;
-use crate::Store;
-
- use crate::Copyable;
-use crate::Context;
-use crate::Mutable;
- use crate::Expr;
- use crate::Stmt;
- use crate::Owned;
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use crate::eval::*;
+    use crate::utils::*;
     #[test]
     fn locate_var() {
 	let mut store = Store::default();
@@ -20,7 +10,6 @@ mod tests {
 	assert_eq!(store.locate(&Lval::var("x")), "x");
     }
 
- use crate::Expr;
     #[test]
     fn locate_ref() {
 	let mut store = Store::default();

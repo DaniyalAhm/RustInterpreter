@@ -1,5 +1,4 @@
-
-
+use crate::lexer::Lexer;
 pub struct Parser<'a> {
     lexer: Peekable<Lexer<'a>>,
     // TODO: anything else you need
@@ -52,17 +51,11 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn parse_block(&mut self) -> ParseResult<Expr> {
-    let mut stmts = Vec::new();
-    self.next_token_match(Token::Lbracket)?;
-    loop{
-        if Token::Rbracket == self.peek_token(){
-                break;
-            }
-
-
-
-
-        }
+    self.next_token_match(Token::Box)?;
+    self.next_token_match(Token::Lparen)?;
+    let e = self.parse_expr()?;
+    self.next_token_match(Token::Rparen)?;
+    Ok(Expr::Box(Box::new(e)))
 
 
 

@@ -11,37 +11,6 @@ use crate::Expr::OBox;
 
 
 
-#[derive(PartialEq, PartialOrd)]
-#[derive(Debug)]
-#[derive(Clone)]
-struct Lifetime(usize);
-
-
-impl Lifetime {
-    pub fn global() -> Lifetime {
-        Lifetime(0)
-    }
-}
-#[derive(PartialEq)]
-#[derive(Clone)]
-#[derive(Hash)]
-
-#[derive(Debug)]
-#[derive(Eq)]
-struct Lval {
-    ident: Ident,
-    derefs: usize,
-}
-impl Lval{
-    fn new(id:  &str, der:usize) -> Lval{
-        return Lval{ident:id.to_string(), derefs:der};
-
-    }
-    fn var(id: &str) -> Lval{
-    return Lval{ident:id.to_string(), derefs:0}; }
-
-
-}
 
 
 #[derive(Debug)]
@@ -52,73 +21,6 @@ struct Slot {
   tipe: Type,
   lifetime: Lifetime,
 }
-type Pvalue = Option<Value>;
-type Ident = String;
-
-type Location = Ident;
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(PartialEq)]
-enum Value {
-    Unit,
-    Int(i32),
-    Ref(Location, Owned),
-}
-
-//NOTE: First lets define a Enum for Structs
-//NOTE: These are all the Enums we will need for semantics based of FR Spec
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Copyable {Yes, No}
-
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(PartialEq)]
-enum Mutable {Yes, No}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Expr {
-    Unit,
-    Int(i32),
-    Lv(Lval, Copyable),
-    OBox(Box<Expr>),
-    Borrow(Lval, Mutable),
-    Block(Vec<Stmt>, Box<Expr>, Lifetime),
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Stmt {
-    Assign(Lval, Expr),
-    LetMut(Ident, Expr),
-    Expr(Expr),
-}
-
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(PartialEq)]
-enum Owned {Yes, No}
-
-
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(PartialEq)]
-enum Type {
-    Unit,
-    Int,
-    TBox(Box<Type>),
-    Ref(Lval, Mutable),
-    Undefined(Box<Type>),
-}
-
-
-type TypeResult<T> = Result<T, Error>;
 
 #[derive(Clone)]
 #[derive(PartialEq)]
@@ -354,26 +256,33 @@ impl Env {
 
     }
     
-    fn update(&mut self, old: Type, new: Type) -> Result<Type, Error>{
-     
+    fn update(&mut self, old: Type, new: Type, i: i32) -> Result<Type, Error>{
+        if i ==0{
+           return Ok(new);
+        }
+
+
         match old{
         Type::TBox(x) =>{
-        let Ok(replaced)= self.update(*x,new) else{return Err(Error::Dummy)};
+        let Ok(replaced)= self.update(*x,new,i-1) else{return Err(Error::Dummy)};
         return Ok(Type::TBox(Box::new(replaced)))
-
-
                 },
         Type::Ref(lv, Mutable::Yes) =>{
-                self.write(&lv, new.clone())?;
-                Ok(Type::Ref(lv,Mutable::Yes ))
+               self.write(&lv, new.clone())?;
+                Ok(new)
             },
 
         Type::Ref(lv, Mutable::No) =>{
+
+                self.write(&lv, new.clone())?;
                 Ok(Type::Ref(lv,Mutable::No))
             },
 
+        Type::Undefined(x)=>{
 
-        Type::Undefined(x)=>{Ok(*x)},
+        let Ok(replaced)= self.update(*x,new,i-1) else{return Err(Error::Dummy)};
+
+                Ok(replaced)},
         x=>{Ok(x)}}}
 
 
@@ -381,7 +290,7 @@ impl Env {
         //self.0.insert(&w.ident, tipe);
         let current = self.0.remove(&w.ident)
             .ok_or(Error::Dummy)?;
-        let Ok(rest) = self.update(current.tipe.clone(), tipe) else {todo!()};
+     let Ok(rest) = self.update(current.tipe.clone(), tipe, w.derefs.try_into().unwrap()) else {todo!()};
         
         let slot = Slot{tipe:rest, lifetime:current.lifetime.clone()};
         self.0.insert(w.ident.clone(), slot);
@@ -425,6 +334,7 @@ impl Env {
     AssignAfterBorrow(Lval),
 }
 
+type TypeResult<T> = Result<T, Error>;
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]
@@ -629,5 +539,5 @@ fn is_copyable(t: &Type) -> bool {
 
 #[cfg(test)]
 mod tests {
-    mod tests3;
+    mod tests2;
 }

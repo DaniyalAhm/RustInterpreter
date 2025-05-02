@@ -1,70 +1,10 @@
 
 
- use std::iter::Peekable;
-
+use std::iter::Peekable;
 use std::str::Lines;
-
-#[derive(PartialEq, PartialOrd)]
-#[derive(Debug)]
-#[derive(Clone)]
-struct Lifetime(usize);
-
-type Ident = String;
-
-impl Lifetime {
-    pub fn global() -> Lifetime {
-        Lifetime(0)
-    }
-}
-#[derive(PartialEq)]
-#[derive(Clone)]
-#[derive(Hash)]
-
-#[derive(Debug)]
-#[derive(Eq)]
-struct Lval {
-    ident: Ident,
-    derefs: usize,
-}
-impl Lval{
-    fn new(id:  &str, der:usize) -> Lval{
-        return Lval{ident:id.to_string(), derefs:der};
-
-    }
-    fn var(id: &str) -> Lval{
-    return Lval{ident:id.to_string(), derefs:0}; }
+pub mod lexer; 
 
 
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Copyable {Yes, No}
-
-
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(PartialEq)]
-enum Mutable {Yes, No}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Expr {
-    Unit,
-    Int(i32),
-    Lv(Lval, Copyable),
-    OBox(Box<Expr>),
-    Borrow(Lval, Mutable),
-    Block(Vec<Stmt>, Box<Expr>, Lifetime),
-}
-
-#[derive(Debug)]
-#[derive(PartialEq)]
-enum Stmt {
-    Assign(Lval, Expr),
-    LetMut(Ident, Expr),
-    Expr(Expr),
-}
     // TODO
 
 #[derive(PartialEq)]
@@ -85,7 +25,7 @@ pub enum Token {
     Int(i32),
     Var(String),
 }
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     contents: Lines<'a>,
     curr_line_num: usize,
     curr_col_num: usize,

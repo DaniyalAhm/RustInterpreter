@@ -3,7 +3,7 @@
 //LIFE TIME IMPLEMENTATION
 #[derive(Debug)]
 #[derive(Clone)]
-#[derive(PartialEq)]
+#[derive(PartialEq, PartialOrd)]
 pub struct Lifetime(pub usize);
 
 

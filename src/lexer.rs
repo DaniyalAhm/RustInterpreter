@@ -1,12 +1,11 @@
 
 
-use std::iter::Peekable;
 use std::str::Lines;
-pub mod lexer; 
 
 
     // TODO
 
+#[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Token {
     Lparen,
@@ -48,12 +47,21 @@ const LEXEMES : [(&str, Token); 13] = [
     ("Box::new", Token::Box),
 ];
 
-enum Error {
+#[derive(Debug)]
+pub enum Error {
     Unknown(usize, usize),
 }
 
 type LexResult = Result<Token, Error>;
 impl<'a> Lexer<'a> {
+
+    pub fn new(contents:& 'a str) -> Lexer<'a>{
+    return Lexer{contents:contents.lines(), curr_line_num:0, curr_col_num:0, curr_line:""};
+
+
+    } 
+
+
     fn unknown(&self) -> Error {
         Error::Unknown(self.curr_line_num, self.curr_col_num)
     }

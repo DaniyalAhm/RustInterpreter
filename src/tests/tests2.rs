@@ -1,18 +1,10 @@
 
-use crate::Env;
- use crate::Slot;
-use crate::Type;
- use crate::Lifetime;
-use crate::Lval;
-
- use crate::Copyable;
-use crate::Context;
-use crate::Mutable;
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use crate::types::*;
+    use crate::utils::*;
     #[test]
     fn env_var() {
         let mut env = Env::default();

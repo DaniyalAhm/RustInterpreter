@@ -1,17 +1,10 @@
-use crate::Type;
-use crate::Lifetime;
-use crate::Lval;
-use crate::Mutable;
-use crate::Expr;
-use crate::Stmt;
-
-  use crate::Copyable;
- use crate::Error;
-use crate::Context;
 
 #[cfg(test)]
 mod type_tests {
     use super::*;
+
+    use crate::types::*;
+    use crate::utils::*;
 
     #[test]
     fn type_value() {

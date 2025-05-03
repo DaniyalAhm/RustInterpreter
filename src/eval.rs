@@ -211,7 +211,7 @@ impl Context {
      pub fn eval_stmt(&mut self, stmt: &Stmt, l: Lifetime) {
         match stmt {
         Stmt::Assign(lv, expr) =>{
-        let (val_expr) = self.eval_expr(expr,l);
+        let val_expr = self.eval_expr(expr,l);
 
         let old_val= self.store.read(lv);
 
@@ -224,7 +224,7 @@ impl Context {
 
         Stmt::LetMut(x, expr) =>{
         
-        let (val_expr) = self.eval_expr(expr,l.clone());
+        let val_expr = self.eval_expr(expr,l.clone());
         let s = Slot{value:Some(val_expr.clone()), lifetime:l.clone()};
                 self.store.0.insert(x.to_string(),s);
 

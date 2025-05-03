@@ -2,30 +2,22 @@
 
 
 use std::collections::HashMap;
-use crate::Value::Int;
-use crate::Value::Ref;
- use std::boxed::Box;
-use crate::Expr::Block;
-use crate::Expr::Borrow;
-use crate::Expr::OBox;
-
-
-
+use crate::utils::*;
 
 
 #[derive(Debug)]
 #[derive(Clone)]
 #[derive(PartialEq)]
 
-struct Slot {
-  tipe: Type,
-  lifetime: Lifetime,
+pub struct Slot {
+  pub tipe: Type,
+  pub lifetime: Lifetime,
 }
 
 #[derive(Clone)]
 #[derive(PartialEq)]
 #[derive(Debug)]
-struct Env(HashMap<Ident, Slot>);
+pub struct Env(pub HashMap<Ident, Slot>);
 impl Env {
 
 
@@ -34,16 +26,16 @@ impl Env {
 
 
     }
-    fn insert(&mut self, var: &str, tipe: Type, lifetime: Lifetime) { 
-    let s = Slot{tipe:tipe, lifetime:lifetime};
-    self.0.insert(var.to_string(), s);
+    pub fn insert(&mut self, var: &str, tipe: Type, lifetime: Lifetime) { 
+        let s = Slot{tipe:tipe, lifetime:lifetime};
+        self.0.insert(var.to_string(), s);
 
 
 
     }
 
 
-    fn type_lval(&self, lval: &Lval) -> TypeResult<Slot> {
+    pub fn type_lval(&self, lval: &Lval) -> TypeResult<Slot> {
             let  Some(slot) = self.0.get(&lval.ident) else{return Err(Error::Dummy)};
 
             let mut current_type = &slot.tipe;
@@ -63,7 +55,7 @@ impl Env {
 
 
                 }
-                (x)=>{return Err(Error::CannotDeref(x.clone()));}
+                x=>{return Err(Error::CannotDeref(x.clone()));}
 
 
                 }
@@ -81,16 +73,16 @@ impl Env {
 
     // Returns the type under the boxes of a type, given that the
     // underlying type is defined
-    fn contained(&self, var: &Ident) -> Option<&Type> {
+    pub fn contained(&self, var: &Ident) -> Option<&Type> {
 
         let Some(slot) = self.0.get(var) else {panic!("Impossible")};
         let mut current_type = &slot.tipe;
-        while true{
+        loop{
 
             match current_type{
             Type::TBox(x)=> {current_type=&*x;}
             Type::Undefined(x) =>{return None;} 
-            (x)=>{return Some(&x);},
+            x=>{return Some(&x);},
 
 
             }
@@ -102,16 +94,18 @@ impl Env {
     }
 
 
-   fn immutable(&self, ty1:Type)-> bool{
+   pub fn immutable(&self, ty1:Type)-> bool{
     match ty1{
         Type::Unit=>{return false;},
         Type::Int=>{return false;},
         Type::TBox(x) =>{self.immutable(*x)},
         Type::Undefined(x) =>{self.immutable(*x)},
         Type::Ref(lv,Mutable::No)=>{
+
         return true;}
 
         Type::Ref(lv,Mutable::Yes)=>{
+
         return false;}
 
         }
@@ -120,7 +114,7 @@ impl Env {
     } 
 
 
-	fn contains(&self, ty1:Type,ty2:Type)->bool{
+	pub fn contains(&self, ty1:Type,ty2:Type)->bool{
         match ty1 {
         Type::TBox(x) => {self.contains(*x,ty2)}
         x => {
@@ -130,7 +124,7 @@ impl Env {
         return false;}}}
 
 
-    fn read_prohibited(&self, lval: &Lval) -> bool {
+    pub fn read_prohibited(&self, lval: &Lval) -> bool {
     
     for vars in self.0.keys(){
     let value = self.contained(vars);
@@ -148,7 +142,7 @@ impl Env {
 
     }
 
-    fn write_prohibited(&self, lval: &Lval) -> bool {
+    pub fn write_prohibited(&self, lval: &Lval) -> bool {
         if self.read_prohibited(lval){
             return true;
         }
@@ -168,7 +162,7 @@ impl Env {
     }
 
     // "move" is a keyword in Rust
-    fn moove(&mut self, lval: &Lval) -> TypeResult<()> {
+    pub fn moove(&mut self, lval: &Lval) -> TypeResult<()> {
         if self.write_prohibited(lval){
         return Err(Error::Dummy);}
 
@@ -187,7 +181,7 @@ impl Env {
 
     }
     
-    fn moove_nested(&mut self, tipe:Type, i:usize) ->  Result<Type, Error> {
+    pub fn moove_nested(&mut self, tipe:Type, i:usize) ->  Result<Type, Error> {
             if i ==0{
             return Ok(Type::Undefined(Box::new(tipe)))}
 
@@ -214,7 +208,7 @@ impl Env {
 
 
     // so is "mut"
-    fn muut(&self, lval: &Lval) -> bool {
+    pub fn muut(&self, lval: &Lval) -> bool {
     
         let  Some(tipe) = self.contained(&lval.ident) else{return false};
 
@@ -239,7 +233,7 @@ impl Env {
     return true;
     }
 
-    fn compatible(&self, t1: &Type, t2: &Type) -> bool { 
+    pub fn compatible(&self, t1: &Type, t2: &Type) -> bool { 
     
             match (t1,t2){
             (Type::Int, Type::Int) => {return true;},
@@ -256,7 +250,7 @@ impl Env {
 
     }
     
-    fn update(&mut self, old: Type, new: Type, i: i32) -> Result<Type, Error>{
+    pub fn update(&mut self, old: Type, new: Type, i: i32) -> Result<Type, Error>{
         if i ==0{
            return Ok(new);
         }
@@ -286,7 +280,7 @@ impl Env {
         x=>{Ok(x)}}}
 
 
-    fn write(&mut self, w: &Lval, tipe: Type) -> TypeResult<()> {
+    pub fn write(&mut self, w: &Lval, tipe: Type) -> TypeResult<()> {
         //self.0.insert(&w.ident, tipe);
         let current = self.0.remove(&w.ident)
             .ok_or(Error::Dummy)?;
@@ -297,7 +291,7 @@ impl Env {
         Ok(())
     }
 
-    fn drop(&mut self, l: Lifetime) {
+    pub fn drop(&mut self, l: Lifetime) {
     
     let mut to_drop = Vec::new();
     for value in self.0.keys(){
@@ -316,7 +310,7 @@ impl Env {
 
  #[derive(PartialEq)]
 #[derive(Debug)]
-    enum Error {
+   pub enum Error {
     Dummy,
     UnknownVar(String),
     CannotDeref(Type),
@@ -339,16 +333,16 @@ type TypeResult<T> = Result<T, Error>;
 #[derive(PartialEq)]
 #[derive(Clone)]
 pub struct Context {
-    env: Env,
+    pub env: Env,
     // TODO: anything else you need
 }
 impl Context {
     // l ≥ m, the ordering relation on liftimes (Note (2) pg. 13)
-    fn lifetime_contains(&self, l: Lifetime, m: Lifetime) -> bool { 
+    pub fn lifetime_contains(&self, l: Lifetime, m: Lifetime) -> bool { 
     l<=m
 
     }
-fn is_copyable(t: &Type) -> bool {
+pub fn is_copyable(t: &Type) -> bool {
     match t {
       Type::Int                        => true,
       Type::Ref(_, Mutable::No)       => true,
@@ -359,23 +353,23 @@ fn is_copyable(t: &Type) -> bool {
     return Context{env:Env::default()};
 }
     // Γ ⊢ T ≥ l (Definition 3.21)
-    fn well_formed(&self, tipe: &Type, l: Lifetime) -> bool {
-    match tipe{
-    Type::Unit=>{true},
-    Type::Int=>{true},
-    Type::TBox(x)=> {self.well_formed(x,l)},
-    Type::Ref(lv, Mutable)=>{
-    let Some(slot) = self.env.0.get(&lv.ident) else{return false};
-    self.lifetime_contains(slot.lifetime.clone(), l)}
-    Type::Undefined(x)=>{self.well_formed(x,l)}
-    
-        }
+    pub fn well_formed(&self, tipe: &Type, l: Lifetime) -> bool {
+        match tipe{
+        Type::Unit=>{true},
+        Type::Int=>{true},
+        Type::TBox(x)=> {self.well_formed(x,l)},
+        Type::Ref(lv, Mutable)=>{
+        let Some(slot) = self.env.0.get(&lv.ident) else{return false};
+        self.lifetime_contains(slot.lifetime.clone(), l)}
+        Type::Undefined(x)=>{self.well_formed(x,l)}
+        
+            }
 
 
     }
     
 
-    fn type_expr(&mut self, expr: &mut Expr) -> TypeResult<Type> { 
+    pub fn type_expr(&mut self, expr: &mut Expr) -> TypeResult<Type> { 
     match expr{
       Expr::Unit => Ok(Type::Unit),
       Expr::Int(_) => Ok(Type::Int),
@@ -425,46 +419,41 @@ fn is_copyable(t: &Type) -> bool {
         }
         Expr::Borrow(lv, Mutable::Yes) => {
 
-            if self.env.write_prohibited(lv) {
-                return Err(Error::MutBorrowAfterBorrow(lv.clone()));
-            }
-
-
             let slot = self.env.type_lval(lv)?;
 
             let ty   = slot.tipe.clone();
-       
+
             let contained = self.env.contained(&lv.ident);
 
-             if None== contained {
-                    return Err(Error::MovedOut(lv.clone()));
-                }
             if self.env.immutable(ty) {
 
                 return Err(Error::MutBorrowAfterBorrow(lv.clone()));}
+        
+            if self.env.write_prohibited(lv) {
+                return Err(Error::MutBorrowAfterBorrow(lv.clone()));
+            }
+            if None== contained {
+                    return Err(Error::MovedOut(lv.clone())); }
            
-           
-            Ok(Type::Ref(lv.clone(), Mutable::Yes))
+                Ok(Type::Ref(lv.clone(), Mutable::Yes))
         }
         Expr::Borrow(lv, Mutable::No) => {
-            if self.env.read_prohibited(lv) {
-                return Err(Error::BorrowAfterMutBorrow(lv.clone()));
-            }
+
+
 
             let slot = self.env.type_lval(lv)?;
             let contained = self.env.contained(&lv.ident);
 
             let ty   = slot.tipe.clone();
+        
+
+            if self.env.read_prohibited(lv) {
+                return Err(Error::BorrowAfterMutBorrow(lv.clone()));
+            }
              if None== contained {
                     return Err(Error::MovedOut(lv.clone()));
                 }
            
-            if self.env.immutable(ty){
-
-                return Err(Error::MutBorrowAfterBorrow(lv.clone()));
-
-                }
-
 
             Ok(Type::Ref(lv.clone(), Mutable::No))
         }
@@ -487,17 +476,17 @@ fn is_copyable(t: &Type) -> bool {
 }
 
 
-    fn type_stmt(&mut self, stmt: &mut Stmt) -> TypeResult<()> { 
+    pub fn type_stmt(&mut self, stmt: &mut Stmt) -> TypeResult<()> { 
 
         match stmt {
         Stmt::Assign(lv, expr) =>{
     
 
 
-        let (old_type) = self.env.type_lval(lv)?;
+        let old_type = self.env.type_lval(lv)?;
 
 
-        let (new_type) = self.type_expr(expr)?;
+        let new_type = self.type_expr(expr)?;
         if !self.env.compatible(&new_type,&old_type.tipe){
             return Err(Error::Dummy); }
         else if self.env.write_prohibited(lv){
@@ -513,12 +502,12 @@ fn is_copyable(t: &Type) -> bool {
 
 
         Stmt::LetMut(x, expr) =>{
-        if(self.env.0.contains_key(x)){
+        if self.env.0.contains_key(x) {
             return Err(Error::Shadowing(x.to_string()));}
 
         
 
-        let (new_type) = self.type_expr(expr)?;
+        let new_type = self.type_expr(expr)?;
         self.env.insert(x,new_type, Lifetime::global());
 
         Ok(())
@@ -537,7 +526,3 @@ fn is_copyable(t: &Type) -> bool {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    mod tests2;
-}

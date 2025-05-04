@@ -16,6 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut contents = String::new();
     File::open(filename)?.read_to_string(&mut contents)?;
 
+    eprintln!("file contents = {:?}", contents);
     let mut e = Parser::new(&contents[..])
         .parse()
         .map_err(|err| Error::new(ErrorKind::Other, format!("{:?}", err)))?;

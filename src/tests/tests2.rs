@@ -3,7 +3,7 @@
 mod tests {
     use super::*;
 
-    use crate::types::*;
+    use crate::types ::*;
     use crate::utils::*;
     #[test]
     fn env_var() {

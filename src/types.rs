@@ -36,7 +36,7 @@ impl Env {
 
 
     pub fn type_lval(&self, lval: &Lval) -> TypeResult<Slot> {
-            let  Some(slot) = self.0.get(&lval.ident) else{return Err(Error::Dummy)};
+            let  Some(slot) = self.0.get(&lval.ident) else{return Err(Error::UnknownVar(lval.ident.clone()))};
 
             let mut current_type = &slot.tipe;
             let mut current_lifetime = &slot.lifetime;
@@ -105,8 +105,10 @@ impl Env {
         return true;}
 
         Type::Ref(lv,Mutable::Yes)=>{
+        let tipe = self.type_lval(&lv);
 
-        return false;}
+
+ return self.immutable(tipe.unwrap().tipe);}
 
         }
 
@@ -213,18 +215,22 @@ impl Env {
         let  Some(tipe) = self.contained(&lval.ident) else{return false};
 
         let mut current_type = tipe;
-        for _ in 0..lval.derefs{
+        let mut i = lval.derefs;
+        while i >0{
         
             match current_type{
             Type::Ref(lv, Mutable::Yes) =>{
-                    
-                    let  Some(tipe) = self.contained(&lv.ident) else {return false;};
+                    i-=1; 
+                    let  Some(tipe) = self.contained(&lv.ident) else {return true;};
 
                     current_type = tipe;},
             Type::Ref(lv, Mutable::No) =>{return false;},
 
-            Type::TBox(x) =>{current_type= &*x},
-            _ =>{return false;}
+            Type::TBox(x) =>{
+                    current_type= &*x},
+            Type::Undefined(x)=>{
+                    current_type = &*x},
+            _ =>{return true;}
 
 
             }
@@ -258,33 +264,35 @@ impl Env {
 
         match old{
         Type::TBox(x) =>{
-        let Ok(replaced)= self.update(*x,new,i-1) else{return Err(Error::Dummy)};
+        let (replaced)= self.update(*x,new,i-1)?;
         return Ok(Type::TBox(Box::new(replaced)))
                 },
         Type::Ref(lv, Mutable::Yes) =>{
                self.write(&lv, new.clone())?;
-                Ok(new)
+                
+                Ok(Type::Ref(lv,Mutable::Yes))
             },
 
         Type::Ref(lv, Mutable::No) =>{
-
-                self.write(&lv, new.clone())?;
-                Ok(Type::Ref(lv,Mutable::No))
+                return Err(Error::UpdateBehindImmRef(lv.clone()));
+             
             },
-
         Type::Undefined(x)=>{
 
-        let Ok(replaced)= self.update(*x,new,i-1) else{return Err(Error::Dummy)};
+        let (replaced)= self.update(*x,new,i-1)?;
+        return Ok(Type::Undefined(Box::new(replaced)))
 
-                Ok(replaced)},
-        x=>{Ok(x)}}}
+            }
+
+
+        x=>{Ok(new)}}}
 
 
     pub fn write(&mut self, w: &Lval, tipe: Type) -> TypeResult<()> {
         //self.0.insert(&w.ident, tipe);
         let current = self.0.remove(&w.ident)
             .ok_or(Error::Dummy)?;
-     let Ok(rest) = self.update(current.tipe.clone(), tipe, w.derefs.try_into().unwrap()) else {todo!()};
+         let (rest) = self.update(current.tipe.clone(), tipe, w.derefs.try_into().unwrap())?;
         
         let slot = Slot{tipe:rest, lifetime:current.lifetime.clone()};
         self.0.insert(w.ident.clone(), slot);
@@ -293,16 +301,16 @@ impl Env {
 
     pub fn drop(&mut self, l: Lifetime) {
     
-    let mut to_drop = Vec::new();
-    for value in self.0.keys(){
-    let Some(slot) = self.0.get(value) else{panic!("Impossible");};
-    if slot.lifetime==l{
-    to_drop.push(value.clone());}}
+        let mut to_drop = Vec::new();
+        for value in self.0.keys(){
+        let Some(slot) = self.0.get(value) else{panic!("Impossible");};
+        if slot.lifetime==l{
+        to_drop.push(value.clone());}}
 
-    for value in to_drop{
-        self.0.remove(&value);
-        
-        }
+        for value in to_drop{
+            self.0.remove(&value);
+            
+            }
 
 
     }
@@ -424,10 +432,9 @@ pub fn is_copyable(t: &Type) -> bool {
             let ty   = slot.tipe.clone();
 
             let contained = self.env.contained(&lv.ident);
+            
 
-            if self.env.immutable(ty) {
 
-                return Err(Error::MutBorrowAfterBorrow(lv.clone()));}
         
             if self.env.write_prohibited(lv) {
                 return Err(Error::MutBorrowAfterBorrow(lv.clone()));
@@ -435,7 +442,14 @@ pub fn is_copyable(t: &Type) -> bool {
             if None== contained {
                     return Err(Error::MovedOut(lv.clone())); }
            
+
+            if !self.env.muut(lv) {
+
+                return Err(Error::MutBorrowBehindImmRef(lv.clone()));}
+
                 Ok(Type::Ref(lv.clone(), Mutable::Yes))
+
+
         }
         Expr::Borrow(lv, Mutable::No) => {
 
@@ -445,11 +459,12 @@ pub fn is_copyable(t: &Type) -> bool {
             let contained = self.env.contained(&lv.ident);
 
             let ty   = slot.tipe.clone();
-        
 
             if self.env.read_prohibited(lv) {
                 return Err(Error::BorrowAfterMutBorrow(lv.clone()));
             }
+            
+
              if None== contained {
                     return Err(Error::MovedOut(lv.clone()));
                 }
@@ -466,9 +481,25 @@ pub fn is_copyable(t: &Type) -> bool {
 
         Expr::Block(stmts, result_expr, lifetime) => {
             for stmt in stmts {
-                self.type_stmt(stmt)?
-            }
+
+
+                self.type_stmt(stmt)?;
+                if let Stmt::LetMut(x, _) = stmt{
+                        let Some(ty_of) = self.env.0.get(x) else {panic!("Impossible");};;
+                        let slot = Slot{tipe:ty_of.tipe.clone(), lifetime:lifetime.clone()};
+                        self.env.0.insert(x.to_string(), slot);}
+
+                if let Stmt::Assign(lv, expr) = stmt{
+                    let slot = self.env.type_lval(&lv)?;
+                    if slot.lifetime < *lifetime{
+                    return Err(Error::LifetimeTooShort(expr.clone()));
+                    }
+                    }
+
+                }
             let t = self.type_expr(result_expr)?;
+            
+
             self.env.drop(lifetime.clone());
             Ok(t)
         }
@@ -480,21 +511,27 @@ pub fn is_copyable(t: &Type) -> bool {
 
         match stmt {
         Stmt::Assign(lv, expr) =>{
-    
 
 
+ 
         let old_type = self.env.type_lval(lv)?;
-
-
+        println!("{:?}",old_type);
+        
         let new_type = self.type_expr(expr)?;
+        
+                
+
         if !self.env.compatible(&new_type,&old_type.tipe){
-            return Err(Error::Dummy); }
+            return Err(Error::IncompatibleTypes(old_type.tipe, new_type)); }
+
         else if self.env.write_prohibited(lv){
             return Err(Error::AssignAfterBorrow(lv.clone()));}
     
+                
+        else if !self.env.muut(lv){
 
-
-        self.env.write(lv, new_type);
+            return Err(Error::UpdateBehindImmRef(lv.clone())); }
+        self.env.write(lv, new_type)?;
 
         Ok(())
 

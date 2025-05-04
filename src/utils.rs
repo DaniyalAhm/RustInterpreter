@@ -45,6 +45,7 @@ pub type Location = Ident;
 ///
 
 
+#[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Copyable {Yes, No}
@@ -64,7 +65,32 @@ pub enum Mutable {Yes, No}
 pub enum Owned {Yes, No}
 
 
+/* FOR REFERENCE
+*
+pub enum Token {
+    Lparen,
+    Rparen,
+    Lbracket,
+    Rbracket,
+    Eq,
+    Ampersand,
+    Star,
+    Comma,
+    Semicolon,
+    Fn,
+    Let,
+    Mut,
+    Box,
+    Int(i32),
+    Var(String),
+}
+
+* */
+
+
 // EXPRESSIONS DEFINATION
+
+#[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Expr {
@@ -76,6 +102,7 @@ pub enum Expr {
     Block(Vec<Stmt>, Box<Expr>, Lifetime),
 }
 
+#[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Stmt {

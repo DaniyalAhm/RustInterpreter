@@ -5,6 +5,7 @@ use std::str::Lines;
 
     // TODO
 
+#[derive(Clone)]
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub enum Token {
@@ -108,20 +109,23 @@ impl<'a> Lexer<'a> {
      }
 
     fn skip_whitespace(&mut self){
-    loop{
-        let Some(ch) = self.curr_line.chars().next() else{return;};
-        if ch == ' '{
-        self.consume(1);}
-        else if self.curr_line.is_empty() {
-            self.curr_line = self.contents.next().unwrap_or("");
-            self.curr_line_num += 1;
-            self.curr_col_num = 1;
-        } else {
-            break;
-        }
+        loop{
+            if self.curr_line.is_empty() {
+                self.curr_line = self.contents.next().unwrap_or("");
+                self.curr_line_num += 1;
+                self.curr_col_num = 1;
+            } 
+
+            let Some(ch) = self.curr_line.chars().next() else{return;};
+
+            if ch == ' '{
+            self.consume(1);}
+            else {
+                break;
+            }
 
 
-         }
+             }
 
 
 
@@ -160,7 +164,17 @@ impl<'a> Iterator for Lexer<'a> {
     fn next(&mut self) -> Option<LexResult> { 
 
         self.skip_whitespace();
+
         if self.curr_line.is_empty() { return None }
+        if let Some((lexeme, token)) = LEXEMES
+            .iter()
+            .find(|(lex, _)| self.curr_line.starts_with(*lex))
+        {
+            self.consume(lexeme.len());
+            return Some(Ok(token.clone()));
+        }
+
+
         //Get the very Next character
         let ch = self.curr_line.chars().next().unwrap();
         //If it is a digit return int

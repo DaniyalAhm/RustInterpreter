@@ -67,13 +67,9 @@ impl<'a> Lexer<'a> {
         Error::Unknown(self.curr_line_num, self.curr_col_num)
     }
 
-    // remove `i` characters and remove any leading whitespace from the
-    // result (including empty lines)
     fn consume(&mut self, i: usize) {
     self.curr_line = &self.curr_line[i..];
-       self.curr_col_num+=i;
-
-     }
+       self.curr_col_num+=i;}
 
     fn symbol_or_keyword(&mut self) -> LexResult { 
 
@@ -89,20 +85,20 @@ impl<'a> Lexer<'a> {
      }
     // similar to `symbol_or_keyword` but for variables
     fn variable(&mut self) -> LexResult {
-    let mut len =0;
-    for character in self.curr_line.chars(){
-            if character.is_ascii_alphanumeric() || character == '_' {
-                len += 1;
-            } else {
-                break;
+        let mut len =0;
+        for character in self.curr_line.chars(){
+                if character.is_ascii_alphanumeric() || character == '_' {
+                    len += 1;
+                } else {
+                    break;
+                }
             }
-        }
-    if len ==0{
-             return Err(self.unknown());
-         }
-    let var = &self.curr_line[..len];
-    self.consume(len);
-    return Ok(Token::Var(var.to_string()));
+        if len ==0{
+                 return Err(self.unknown());
+             }
+        let var = &self.curr_line[..len];
+        self.consume(len);
+        return Ok(Token::Var(var.to_string()));
 
      }
 
@@ -163,7 +159,7 @@ impl<'a> Iterator for Lexer<'a> {
 
         self.skip_whitespace();
 
-        if self.curr_line.is_empty() { return None }
+        if self.curr_line.is_empty() {return None; }
         if let Some((lexeme, token)) = LEXEMES
             .iter()
             .find(|(lex, _)| self.curr_line.starts_with(*lex))

@@ -100,7 +100,7 @@ impl Env {
         let tipe = self.type_lval(&lv);
 
 
- return self.immutable(tipe.unwrap().tipe);}
+         return self.immutable(tipe.unwrap().tipe);}
 
         }
 
@@ -109,25 +109,25 @@ impl Env {
 
 
 	pub fn contains(&self, ty1:Type,ty2:Type)->bool{
-        match ty1 {
-        Type::TBox(x) => {self.contains(*x,ty2)}
-        x => {
-        if x == ty2{
-                return true;
-            }
-        return false;}}}
+            match ty1 {
+            Type::TBox(x) => {self.contains(*x,ty2)}
+            x => {
+            if x == ty2{
+                    return true;
+                }
+            return false;}}}
 
 
     pub fn read_prohibited(&self, lval: &Lval) -> bool {
     
-    for vars in self.0.keys(){
-    let value = self.contained(vars);
-    if let Some(Type::Ref(x, Mutable::Yes)) = value{
-            if x.ident==lval.ident{
+        for vars in self.0.keys(){
+        let value = self.contained(vars);
+        if let Some(Type::Ref(x, Mutable::Yes)) = value{
+                if x.ident==lval.ident{
 
-                return true;
-                }
-            }}
+                    return true;
+                    }
+                }}
 
 
 
@@ -311,7 +311,7 @@ impl Env {
     }
 }
 
- #[derive(PartialEq)]
+#[derive(PartialEq)]
 #[derive(Debug)]
    pub enum Error {
     Dummy,
@@ -364,11 +364,9 @@ pub fn is_copyable(t: &Type) -> bool {
         Type::Ref(lv, Mutable)=>{
         let Some(slot) = self.env.0.get(&lv.ident) else{return false};
         self.lifetime_contains(slot.lifetime.clone(), l)}
-        Type::Undefined(x)=>{self.well_formed(x,l)}
+        Type::Undefined(x)=>{return false;}
         
             }
-
-
     }
     
 
@@ -398,7 +396,7 @@ pub fn is_copyable(t: &Type) -> bool {
 
                 return Err(Error::MoveBehindRef(lv.clone()));}
             if Self::is_copyable(&ty) {
-                if self.env.read_prohibited(lv) {
+                if self.env.write_prohibited(lv) {
                     return Err(Error::CopyAfterMutBorrow(lv.clone()));
                 }
                 *expr = Expr::Lv(lv.clone(), Copyable::Yes);
@@ -406,9 +404,6 @@ pub fn is_copyable(t: &Type) -> bool {
             }
 
   
-            if self.env.read_prohibited(lv) {
-                return Err(Error::MoveAfterBorrow(lv.clone()));
-            }
 
             if self.env.write_prohibited(lv) {
                return Err(Error::MoveAfterBorrow(lv.clone()));
@@ -422,53 +417,31 @@ pub fn is_copyable(t: &Type) -> bool {
         Expr::Borrow(lv, Mutable::Yes) => {
 
             let slot = self.env.type_lval(lv)?;
-
             let ty   = slot.tipe.clone();
-
-            let contained = self.env.contained(&lv.ident);
-            
-
-
-        
+            let contained = self.env.contained(&lv.ident); 
             if self.env.write_prohibited(lv) {
                 return Err(Error::MutBorrowAfterBorrow(lv.clone()));
             }
             if None== contained {
                     return Err(Error::MovedOut(lv.clone())); }
-           
-
             if !self.env.muut(lv) {
-
                 return Err(Error::MutBorrowBehindImmRef(lv.clone()));}
-
                 Ok(Type::Ref(lv.clone(), Mutable::Yes))
-
-
         }
         Expr::Borrow(lv, Mutable::No) => {
-
-
-
             let slot = self.env.type_lval(lv)?;
             let contained = self.env.contained(&lv.ident);
-
             let ty   = slot.tipe.clone();
-
             if self.env.read_prohibited(lv) {
                 return Err(Error::BorrowAfterMutBorrow(lv.clone()));
             }
-            
-
              if None== contained {
                     return Err(Error::MovedOut(lv.clone()));
                 }
            
-
             Ok(Type::Ref(lv.clone(), Mutable::No))
         }
         Expr::OBox(e) => {
-
-
             let inner_type = self.type_expr(e)?;
             Ok(Type::TBox(Box::new(inner_type)))
         }
@@ -520,8 +493,7 @@ pub fn is_copyable(t: &Type) -> bool {
 
         else if self.env.write_prohibited(lv){
             return Err(Error::AssignAfterBorrow(lv.clone()));}
-    
-                
+   
 
 
 

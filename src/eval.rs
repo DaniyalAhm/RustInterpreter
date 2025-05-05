@@ -36,18 +36,8 @@ pub fn locs_by_lifetime(& self, l:Lifetime) -> Vec<Pvalue>{
     let Some(s) = self.0.get(locs) else {panic!("Impossible")};
     if s.lifetime == l{
                 result.push(Some(Value::Ref(locs.to_string(),Owned::Yes)));
-                
-
-
-            }
-
-
-        }
-    println!("{:?}", result); 
-    return result;
-
-
-    }
+                }}
+        return result;}
     
 pub fn insert(&mut self, loc:&str, val:Pvalue, l:Lifetime){
 

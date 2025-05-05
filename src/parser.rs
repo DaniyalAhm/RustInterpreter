@@ -149,18 +149,6 @@ impl<'a> Parser<'a> {
                 Stmt::LetMut(var, next_expr)
             },
 
-
-            Token::Var(_) | Token::Star => {
-
-                let lv = self.parse_lval()?;
-                //If So this is an Assignment
-                let next_token = self.next_token()?;
-                if let Token::Eq = next_token{
-                    return Ok(Stmt::Assign(lv, self.parse_expr()?));
-
-                }
-                   return Ok(Stmt::Expr(Expr::Lv(lv, Copyable::No)));
-            }
             _ => {
                 eprintln!("[parse_stmt] fallback expr stmt");
                 let next_expr = self.parse_expr()?;

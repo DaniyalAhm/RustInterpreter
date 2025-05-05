@@ -1,4 +1,7 @@
   fn main () {
-    let mut x = 5;
-    x = 4 ;
-  }
+    let mut y =6;
+    y =8888;
+    let mut x = &y;
+    let mut z = &x;
+    let mut j = {let mut i = 9;};
+    }

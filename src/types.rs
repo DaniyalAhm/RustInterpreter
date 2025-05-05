@@ -8,7 +8,6 @@ use crate::utils::*;
 #[derive(Debug)]
 #[derive(Clone)]
 #[derive(PartialEq)]
-
 pub struct Slot {
   pub tipe: Type,
   pub lifetime: Lifetime,
@@ -19,19 +18,12 @@ pub struct Slot {
 #[derive(Debug)]
 pub struct Env(pub HashMap<Ident, Slot>);
 impl Env {
-
-
  pub fn default() -> Env{
     return Env(HashMap::new());
-
-
     }
     pub fn insert(&mut self, var: &str, tipe: Type, lifetime: Lifetime) { 
         let s = Slot{tipe:tipe, lifetime:lifetime};
         self.0.insert(var.to_string(), s);
-
-
-
     }
 
 
@@ -166,13 +158,13 @@ impl Env {
     // "move" is a keyword in Rust
     pub fn moove(&mut self, lval: &Lval) -> TypeResult<()> {
         if self.write_prohibited(lval){
-        return Err(Error::Dummy);}
+        return Err(Error::MutBorrowAfterBorrow(lval.clone()));}
 
-        let  Some(current) = self.0.get(&lval.ident) else {return Err(Error::Dummy)};
-        let result = self.moove_nested(current.tipe.clone(), lval.derefs.clone());
-        if let Ok(tipe) = result{
+        let  Some(current) = self.0.get(&lval.ident) else {return Err(Error::UnknownVar(lval.ident.clone()))};
+        let result = self.moove_nested(current.tipe.clone(), lval.derefs.clone())?;
+        if let (tipe) = result{
 
-            let  Some(current) = self.0.get(&lval.ident) else {return Err(Error::Dummy)};
+            let  Some(current) = self.0.get(&lval.ident) else {return Err(Error::UnknownVar(lval.ident.clone()))};
             let slot = Slot{tipe:tipe, lifetime:current.lifetime.clone()};
             self.0.insert(lval.ident.clone(), slot);
             return Ok(())
@@ -190,12 +182,12 @@ impl Env {
         match tipe{
 
             Type::TBox(x) =>{
-            let Ok(rest) = self.moove_nested(*x,i-1) else{return Err(Error::Dummy)};
+            let (rest) = self.moove_nested(*x,i-1)?;
                 
             return Ok(Type::TBox(Box::new(rest)))},
-            Type::Ref(lval, Mutable::Yes) =>{ return Err(Error::Dummy)},
+            Type::Ref(lval, _) =>{ return Err(Error::MoveBehindRef(lval.clone()))},
             Type::Undefined(x)=>{return Err(Error::Dummy)},
-            x=>{return Err(Error::Dummy)}
+            x=>{return Err(Error::CannotDeref(x))}
 
 
             }
@@ -268,6 +260,7 @@ impl Env {
         return Ok(Type::TBox(Box::new(replaced)))
                 },
         Type::Ref(lv, Mutable::Yes) =>{
+
                self.write(&lv, new.clone())?;
                 
                 Ok(Type::Ref(lv,Mutable::Yes))
@@ -291,7 +284,9 @@ impl Env {
     pub fn write(&mut self, w: &Lval, tipe: Type) -> TypeResult<()> {
         //self.0.insert(&w.ident, tipe);
         let current = self.0.remove(&w.ident)
-            .ok_or(Error::Dummy)?;
+            .ok_or(Error::UnknownVar(w.ident.clone()))?;
+
+
          let (rest) = self.update(current.tipe.clone(), tipe, w.derefs.try_into().unwrap())?;
         
         let slot = Slot{tipe:rest, lifetime:current.lifetime.clone()};
@@ -393,20 +388,19 @@ pub fn is_copyable(t: &Type) -> bool {
             let slot = self.env.type_lval(lv)?;  
             let ty   = slot.tipe.clone();
 
-                let contained = self.env.contained(&lv.ident);
+            let contained = self.env.contained(&lv.ident);
 
              if None== contained {
                     return Err(Error::MovedOut(lv.clone()));
                 }
            
-            if let Some(Type::Ref(x, Mutable::No))= contained{
+            if let Some(Type::Ref(x, _))= contained{
 
                 return Err(Error::MoveBehindRef(lv.clone()));}
             if Self::is_copyable(&ty) {
                 if self.env.read_prohibited(lv) {
                     return Err(Error::CopyAfterMutBorrow(lv.clone()));
                 }
-                // turn this load into the “we’ve now copied it” form
                 *expr = Expr::Lv(lv.clone(), Copyable::Yes);
                 return Ok(ty);
             }
@@ -528,12 +522,12 @@ pub fn is_copyable(t: &Type) -> bool {
             return Err(Error::AssignAfterBorrow(lv.clone()));}
     
                 
-        else if !self.env.muut(lv){
 
-            return Err(Error::UpdateBehindImmRef(lv.clone())); }
+
+
         self.env.write(lv, new_type)?;
 
-        Ok(())
+        return Ok(());
 
             },
 

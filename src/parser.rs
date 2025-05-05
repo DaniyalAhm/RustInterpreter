@@ -25,7 +25,6 @@ impl<'a> Parser<'a> {
     }
 
     pub fn next_token(&mut self) -> ParseResult<Token> {
-        eprintln!("[next_token] about to fetch next token");
         let result = match self.lexer.next() {
             Some(Ok(token)) => {
                 eprintln!("[next_token] got token: {:?}", token);
@@ -92,11 +91,18 @@ impl<'a> Parser<'a> {
             statements.push(temp);
         }
         eprintln!("[parse_block] parsing tail expression");
-        let Some(Stmt::Expr(last)) = statements.pop() else{return Err(Error::EndOfFile)};
+        if let (Stmt::Expr(last)) = &statements[statements.len()-1]{
 
+            let Some(Stmt::Expr(last)) = statements.pop() else {panic!("Impossible");};
+            self.next_token_match(Token::Rbracket)?;
+            eprintln!("[parse_block] exiting block parse");
+            return Ok(Expr::Block(statements, Box::new(last), Lifetime::global()));
+
+        }
+        //All Functions return Unit;
         self.next_token_match(Token::Rbracket)?;
         eprintln!("[parse_block] exiting block parse");
-        Ok(Expr::Block(statements, Box::new(last), Lifetime::global()))
+        return   Ok(Expr::Block(statements, Box::new(Expr::Unit), Lifetime::global()));
     }
 
     fn parse_box(&mut self) -> ParseResult<Expr> {
@@ -112,13 +118,14 @@ impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         eprintln!("[parse_stmt] entering stmt parse, peek: {:?}", self.peek_token());
         let stmt = match self.peek_token()? {
-            Token::Star => {
+            Token::Star | Token::Var(_) => {
                 eprintln!("[parse_stmt] star found");
                 let lv = self.parse_lval()?;
                 if *self.peek_token()? == Token::Eq {
                     eprintln!("[parse_stmt] assignment detected");
                     self.next_token()?;
                     let next_expr = self.parse_expr()?;
+
                     self.next_token_match(Token::Semicolon)?;
                     Stmt::Assign(lv, next_expr)
                 } else {
@@ -200,7 +207,7 @@ impl<'a> Parser<'a> {
 
             //You Cannot get a Statement inside of an expression, so these are all the cases there
             //are
-            _ => todo!(),
+            x => return Err(Error::Unexpected(x.clone())) ,
         };
         eprintln!("[parse_expr] exiting expr parse: {:?}", expr);
         Ok(expr)
@@ -219,7 +226,7 @@ impl<'a> Parser<'a> {
             eprintln!("[parse_lval] exiting lval parse: {} with {} derefs", x, derefs);
             Ok(Lval { ident: x, derefs })
         } else {
-            eprintln!("Got unexpected");
+            eprintln!("Got unexpected in LVAl");
             Err(Error::Unexpected(var))
         }
     }

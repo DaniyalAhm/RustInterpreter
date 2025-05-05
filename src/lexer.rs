@@ -91,14 +91,12 @@ impl<'a> Lexer<'a> {
     fn variable(&mut self) -> LexResult {
     let mut len =0;
     for character in self.curr_line.chars(){
-        if character!=' '{
-                 len+=1;
-             }
-        else{
-                 break;
-             }
-
-         }
+            if character.is_ascii_alphanumeric() || character == '_' {
+                len += 1;
+            } else {
+                break;
+            }
+        }
     if len ==0{
              return Err(self.unknown());
          }

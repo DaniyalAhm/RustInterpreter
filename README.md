@@ -1,4 +1,3 @@
-
 # Introduction
 
 Hello Professor,  I mainly wrote this to ensure that my logic was correct for each part of the project. I Chose to leave this in to explain my logic and help you grade
@@ -717,7 +716,7 @@ pub fn update(&mut self, old: Type, new: Type, i: i32) -> Result<Type, Error>{
 
 ```
 
-According to rule in the Spec
+According to rule in the Final Project Landing Page:
 $$
 \begin{aligned}
 \mathrm{update}(\Gamma, \epsilon, \tau_1, \tau_2) &= (\Gamma, \tau_2) \\
@@ -1258,23 +1257,24 @@ Same idea as before, only difference is that we break is we see something that i
 ```
 fn skip_whitespace(&mut self){
 	loop{
-		if self.curr_line.is_empty() {
-			self.curr_line = self.contents.next().unwrap_or("");
+		if self.curr_line.is_empty() || self.curr_line.starts_with("//"){
+			let Some(temp) = self.contents.next() else {return};
+
+			self.curr_line= temp;
 			self.curr_line_num += 1;
 			self.curr_col_num = 1;
+			continue;
 		} 
 
 		let Some(ch) = self.curr_line.chars().next() else{return;};
 
-		if ch == ' '{
+		if ch.is_whitespace(){
 		self.consume(1);}
 		else {
 			break;
 		}
+		 } }
 
-
-		 }
- }
 
 ```
 
@@ -1288,32 +1288,36 @@ This is a function I incorporated that simply skips white spaces and and empty l
 
 ```
 pub fn parse_block(&mut self) -> ParseResult<Expr> {
-	eprintln!("[parse_block] entering block parse");
-	self.next_token_match(Token::Lbracket)?;
-	let mut statements = Vec::new();
-	while *self.peek_token()? != Token::Rbracket {
-		eprintln!("[parse_block] parsing statement, peek: {:?}", self.peek_token());
-		let temp = self.parse_stmt()?;
-		eprintln!("[parse_block] parsed statement: {:?}", temp);
-		statements.push(temp);
-	}
-	eprintln!("[parse_block] parsing tail expression");
-	if let (Stmt::Expr(last)) = &statements[statements.len()-1]{
+eprintln!("[parse_block] entering block parse");
+self.next_token_match(Token::Lbracket)?;
+let mut statements = Vec::new();
+while *self.peek_token()? != Token::Rbracket {
+	eprintln!("[parse_block] parsing statement, peek: {:?}", self.peek_token());
+	let temp = self.parse_stmt()?;
+	eprintln!("[parse_block] parsed statement: {:?}", temp);
+	statements.push(temp);
+}
+eprintln!("[parse_block] parsing tail expression");
+if let (Stmt::Expr(last)) = &statements[statements.len()-1]{
 
-		let Some(Stmt::Expr(last)) = statements.pop() else {panic!("Impossible");};
-		self.next_token_match(Token::Rbracket)?;
-		eprintln!("[parse_block] exiting block parse");
-		return Ok(Expr::Block(statements, Box::new(last), Lifetime::global()));
-
-	}
-	//All Functions return Unit;
+	let Some(Stmt::Expr(last)) = statements.pop() else {panic!("Impossible");};
 	self.next_token_match(Token::Rbracket)?;
 	eprintln!("[parse_block] exiting block parse");
-	return   Ok(Expr::Block(statements, Box::new(Expr::Unit), Lifetime::global()));
+
+	self.new_lifetime();
+	return Ok(Expr::Block(statements, Box::new(last), Lifetime(self.lifetime)));
+
 }
+//All Functions return Unit;
+self.next_token_match(Token::Rbracket)?;
+eprintln!("[parse_block] exiting block parse");
+self.new_lifetime();
+return   Ok(Expr::Block(statements, Box::new(Expr::Unit), Lifetime(self.lifetime)));
+}
+
 ```
 
-A block is essentially a scope, Thus we loop through our code and we keep calling `parse_stmt` until we see a `}`. In which case we break out of the while loop and we check the last item within our vector of 'statements' to see if it is a expression or a statement. If it is a 'expression', we assign it to be the last expression within our Block, otherwise we assign a `Unit` to be the last expression within our block. (Since if a function does not return an explicit value it will always return a Unit).
+A block is essentially a scope, Thus we loop through our code and we keep calling `parse_stmt` until we see a `}`. In which case we break out of the while loop and we check the last item within our vector of 'statements' to see if it is a expression or a statement. If it is a 'expression', we assign it to be the last expression within our Block, otherwise we assign a `Unit` to be the last expression within our block. (Since if a function does not return an explicit value it will always return a Unit). Any time we return a block, we must ensure a new unique lifetime, hence we call our `self.new_lifetime` function to ensure this!
 
 
 ### `parse_box`
@@ -1480,3 +1484,127 @@ pub fn parse_lval(&mut self) -> ParseResult<Lval> {
 
 This function somewhat simple, all we do is each time we see a `*` we add to the total number of deferences then we assert that we see a variable and return the Lval with proper number of recorded dereferences!
 
+# Finally
+
+Our Parser Should be able to Parse the following Expression 
+```
+  fn main () {
+    let mut y =6;
+    y =8888;
+    //This is a comment;
+
+
+    let mut x = &y;
+    let mut z = &x;
+    {let mut i = 9;
+    };
+    }
+
+
+```
+
+
+# Evaluation
+
+For evaluation I chose to use the test that you gave me, with a few minor tweaks to the definition to fit my implementation
+- For example you used `Type::boxx` which I changed to `Type:TBox`
+- Overall the Logic Should be the exact same, I double checked of this but apologies if I missed anything peculiar 
+
+Here is the output on all the tests by running `cargo test`
+
+```
+test tests::tests1::tests::drop_owned ... ok
+test tests::tests1::tests::drop_unowned ... ok
+test tests::tests1::tests::drop_larger_example ... ok
+test tests::tests1::tests::eval_block ... ok
+test tests::tests1::tests::eval_block_mut_ref ... ok
+test tests::tests1::tests::eval_block_ref ... ok
+test tests::tests1::tests::eval_box ... ok
+test tests::tests1::tests::eval_box_box ... ok
+test tests::tests1::tests::eval_assign_copy ... ok
+test tests::tests1::tests::eval_assign_move ... ok
+test tests::tests1::tests::eval_copy ... ok
+test tests::tests1::tests::eval_assign_move_deref ... ok
+test tests::tests1::tests::eval_expr_stmt ... ok
+test tests::tests1::tests::eval_assign_replace ... ok
+test tests::tests1::tests::eval_let_mut ... ok
+test tests::tests1::tests::eval_lits ... ok
+test tests::tests1::tests::eval_move ... ok
+test tests::tests1::tests::locate_ref ... ok
+test tests::tests1::tests::locate_panic - should panic ... ok
+test tests::tests1::tests::locate_var ... ok
+test tests::tests1::tests::read_panic - should panic ... ok
+test tests::tests1::tests::read_ref_owned ... ok
+test tests::tests1::tests::read_var ... ok
+test tests::tests1::tests::write_deref_read_diff ... ok
+test tests::tests1::tests::write_panic - should panic ... ok
+test tests::tests2::tests::basic_write_prohibited ... ok
+test tests::tests2::tests::basic_write_prohibited_2 ... ok
+test tests::tests2::tests::compatible_basic ... ok
+test tests::tests2::tests::compatible_basic_fail ... ok
+test tests::tests2::tests::compatible_refs ... ok
+test tests::tests2::tests::env_contained ... ok
+test tests::tests2::tests::drop_basic ... ok
+test tests::tests1::tests::write_two_deref ... ok
+test tests::tests3::type_tests::assign_err_borrow ... ok
+test tests::tests2::tests::mut_succ ... ok
+test tests::tests3::type_tests::assign_err_update_imm ... FAILED
+test tests::tests3::type_tests::assign_ok_ref ... ok
+test tests::tests2::tests::env_lval_box ... ok
+test tests::tests2::tests::env_var ... ok
+test tests::tests2::tests::basic_read_prohibited ... ok
+test tests::tests2::tests::env_lval_ref ... ok
+test tests::tests2::tests::env_contained_undefined ... ok
+test tests::tests3::type_tests::cannot_copy ... ok
+test tests::tests2::tests::move_under_ref ... ok
+test tests::tests3::type_tests::cannot_move ... ok
+test tests::tests3::type_tests::declare_ok ... ok
+test tests::tests3::type_tests::declare_shadow ... ok
+test tests::tests3::type_tests::imm_borrow_err ... ok
+test tests::tests3::type_tests::assign_err_incompat ... ok
+test tests::tests3::type_tests::imm_borrow_ok ... ok
+test tests::tests3::type_tests::invalid_lval ... ok
+test tests::tests3::type_tests::keep_move ... ok
+test tests::tests3::type_tests::imm_borrow_err_moved_out ... ok
+test tests::tests3::type_tests::mut_borrow_err_through_imm_ref ... ok
+test tests::tests3::type_tests::mut_borrow_ok ... ok
+test tests::tests3::type_tests::still_moved_out ... ok
+test tests::tests2::tests::mut_fail ... ok
+test tests::tests3::type_tests::assign_err_moved_out ... ok
+test tests::tests3::type_tests::type_box ... ok
+test tests::tests3::type_tests::assign_move_in ... ok
+test tests::tests3::type_tests::assign_err_unknown ... ok
+test tests::tests3::type_tests::assign_ok ... ok
+test tests::tests3::type_tests::block_err_lifetime ... ok
+test tests::tests2::tests::write_basic ... ok
+test tests::tests3::type_tests::block_ok ... ok
+test tests::tests3::type_tests::declare_moved_out ... ok
+test tests::tests3::type_tests::copied ... ok
+test tests::tests2::tests::write_ref ... ok
+test tests::tests3::type_tests::type_value ... ok
+test tests::tests2::tests::move_under_box ... ok
+test tests::tests3::type_tests::make_copy ... ok
+test tests::tests3::type_tests::move_behind_ref ... ok
+test tests::tests3::type_tests::moved_out ... ok
+test tests::tests3::type_tests::mut_borrow_err_already_borrowed ... ok
+test tests::tests3::type_tests::mut_borrow_through_ref ... ok
+test tests::tests3::type_tests::mut_borrow_err_moved_out ... ok
+
+failures:
+
+---- tests::tests3::type_tests::assign_err_update_imm stdout ----
+Slot { tipe: Int, lifetime: Lifetime(0) }
+thread 'tests::tests3::type_tests::assign_err_update_imm' panicked at src/tests/tests3.rs:459:9:
+assertion `left == right` failed
+  left: Ok(())
+ right: Err(UpdateBehindImmRef(Lval { ident: "z", derefs: 2 }))
+
+
+failures:
+    tests::tests3::type_tests::assign_err_update_imm
+
+test result: FAILED. 75 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+```
+
+As you can see I am failing one test, Which I could not for the life of me get it to pass. When I did, I would proceed to fail some other test 

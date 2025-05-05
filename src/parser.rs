@@ -6,7 +6,7 @@ use crate::lexer;
 use crate::lexer::*;
 pub struct Parser<'a> {
     lexer: Peekable<Lexer<'a>>,
-    // TODO: anything else you need
+    lifetime:usize,
 }
 
 #[derive(Debug)]
@@ -21,7 +21,12 @@ pub type ParseResult<T> = Result<T, Error>;
 impl<'a> Parser<'a> {
     pub fn new(contents: &'a str) -> Parser<'a> {
         eprintln!("[Parser::new] initializing parser");
-        Parser { lexer: Lexer::new(contents).peekable() }
+        Parser { lexer: Lexer::new(contents).peekable(), lifetime:0 }
+    }
+
+    pub fn new_lifetime(&mut self){
+        self.lifetime+=1;
+
     }
 
     pub fn next_token(&mut self) -> ParseResult<Token> {
@@ -96,13 +101,16 @@ impl<'a> Parser<'a> {
             let Some(Stmt::Expr(last)) = statements.pop() else {panic!("Impossible");};
             self.next_token_match(Token::Rbracket)?;
             eprintln!("[parse_block] exiting block parse");
-            return Ok(Expr::Block(statements, Box::new(last), Lifetime::global()));
+
+            self.new_lifetime();
+            return Ok(Expr::Block(statements, Box::new(last), Lifetime(self.lifetime)));
 
         }
         //All Functions return Unit;
         self.next_token_match(Token::Rbracket)?;
         eprintln!("[parse_block] exiting block parse");
-        return   Ok(Expr::Block(statements, Box::new(Expr::Unit), Lifetime::global()));
+        self.new_lifetime();
+        return   Ok(Expr::Block(statements, Box::new(Expr::Unit), Lifetime(self.lifetime)));
     }
 
     fn parse_box(&mut self) -> ParseResult<Expr> {

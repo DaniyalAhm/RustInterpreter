@@ -104,15 +104,18 @@ impl<'a> Lexer<'a> {
 
     fn skip_whitespace(&mut self){
         loop{
-            if self.curr_line.is_empty() {
-                self.curr_line = self.contents.next().unwrap_or("");
+            if self.curr_line.is_empty() || self.curr_line.starts_with("//"){
+                let Some(temp) = self.contents.next() else {return};
+
+                self.curr_line= temp;
                 self.curr_line_num += 1;
                 self.curr_col_num = 1;
+                continue;
             } 
 
             let Some(ch) = self.curr_line.chars().next() else{return;};
 
-            if ch == ' '{
+            if ch.is_whitespace(){
             self.consume(1);}
             else {
                 break;
@@ -120,9 +123,6 @@ impl<'a> Lexer<'a> {
 
 
              }
-
-
-
      }
 
     // similar to `symbol_or_keyword` for but integer literals
@@ -159,7 +159,7 @@ impl<'a> Iterator for Lexer<'a> {
 
         self.skip_whitespace();
 
-        if self.curr_line.is_empty() {return None; }
+        if self.curr_line.is_empty()  {return None; }
         if let Some((lexeme, token)) = LEXEMES
             .iter()
             .find(|(lex, _)| self.curr_line.starts_with(*lex))

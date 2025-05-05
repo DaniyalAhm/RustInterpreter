@@ -1,9 +1,8 @@
 pub mod utils;
 pub mod eval;
 pub mod types;
-pub mod parser;
 pub mod lexer;
-
+pub mod parser;
 
 #[cfg(test)]
 mod tests {

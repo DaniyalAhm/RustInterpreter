@@ -399,6 +399,7 @@ pub fn is_copyable(t: &Type) -> bool {
                 if self.env.write_prohibited(lv) {
                     return Err(Error::CopyAfterMutBorrow(lv.clone()));
                 }
+
                 *expr = Expr::Lv(lv.clone(), Copyable::Yes);
                 return Ok(ty);
             }

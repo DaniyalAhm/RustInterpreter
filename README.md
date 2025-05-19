@@ -70,7 +70,7 @@
 
 # Introduction
 
-Hello Professor,  I mainly wrote this to ensure that my logic was correct for each part of the project. I Chose to leave this in to explain my logic and help you grade
+I mainly wrote this to ensure that my logic was correct for each part of the project. I Chose to leave this in to explain my logic and help you grade
 
 
 
